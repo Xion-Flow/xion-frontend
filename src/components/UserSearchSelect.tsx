@@ -135,7 +135,7 @@ export const UserSearchSelect: React.FC<UserSearchSelectProps> = ({
       )}
 
       {/* Floating User Search Dropdown Menu */}
-      {isOpen && !selectedUser && (
+      {isOpen && !selectedUser && query.trim().length > 0 && (
         <div
           style={{
             position: 'absolute',

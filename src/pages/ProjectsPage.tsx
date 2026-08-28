@@ -346,10 +346,7 @@ export const ProjectsPage = () => {
             />
           </div>
 
-          <div className="form-group">
-            <label>Architecture & Tech Stack Builder</label>
-            <VisualTechStackEditor value={techStack} onChange={setTechStack} />
-          </div>
+
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div className="form-group">

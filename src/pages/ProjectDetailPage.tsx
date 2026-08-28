@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { CheckSquare, Users, FileText, Code, Plus, ArrowLeft, Radio, Pencil, UserMinus, Archive, Trash2 } from 'lucide-react';
+import { CheckSquare, Users, FileText, Code, Plus, ArrowLeft, Radio, Pencil, UserMinus, Archive, Trash2, Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { api } from '../services/api';
@@ -18,7 +18,7 @@ export const ProjectDetailPage: React.FC = () => {
   const { socket, isConnected, joinProject, leaveProject } = useSocket();
 
   const [project, setProject] = useState<Project | null>(null);
-  const [activeTab, setActiveTab] = useState<'roadmap' | 'team' | 'documents' | 'techstack'>('roadmap');
+  const [activeTab, setActiveTab] = useState<'roadmap' | 'team' | 'documents' | 'techstack' | 'settings'>('roadmap');
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +55,14 @@ export const ProjectDetailPage: React.FC = () => {
       const [projRes, userRes] = await Promise.all([api.getProjectDetails(id), api.getUsers()]);
       setProject(projRes.project);
       setAllUsers(userRes.users);
+
+      setEditName(projRes.project.name || '');
+      setEditDescription(projRes.project.description || '');
+      setEditTechStack(projRes.project.techStack || '');
+      setEditStatus(projRes.project.status || 'IN_PROGRESS');
+      setEditGithubUrl(projRes.project.githubUrl || '');
+      setEditDemoUrl(projRes.project.demoUrl || '');
+      setEditTargetDate(projRes.project.targetDate ? projRes.project.targetDate.split('T')[0] : '');
 
       if (!selectedPhaseId && projRes.project.phases && projRes.project.phases.length > 0) {
         const activeP = projRes.project.phases.find((p) => p.status === 'IN_PROGRESS') || projRes.project.phases[0];
@@ -334,7 +342,7 @@ export const ProjectDetailPage: React.FC = () => {
               <Badge status={project.status} />
               <button
                 className="btn btn-secondary btn-sm"
-                onClick={() => openEditModal(project)}
+                onClick={() => setActiveTab('settings')}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontWeight: 700 }}
               >
                 <Pencil size={14} />
@@ -392,6 +400,15 @@ export const ProjectDetailPage: React.FC = () => {
         >
           <Code size={16} />
           <span>Tech Stack</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`btn ${activeTab === 'settings' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }}
+        >
+          <Settings size={16} />
+          <span>Project Settings</span>
         </button>
       </div>
 
@@ -729,6 +746,149 @@ export const ProjectDetailPage: React.FC = () => {
         </div>
       )}
 
+      {/* TAB 5: PROJECT SETTINGS */}
+      {activeTab === 'settings' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <form onSubmit={handleSaveProjectDetails}>
+            {/* Card 1: General Details */}
+            <div className="card" style={{ marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+                General Project Details
+              </h3>
+
+              <div className="form-group">
+                <label htmlFor="editName">Project Name *</label>
+                <input
+                  id="editName"
+                  type="text"
+                  className="input-field"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="editDescription">Project Description</label>
+                <textarea
+                  id="editDescription"
+                  className="input-field"
+                  rows={3}
+                  placeholder="Provide details about the project goals, target audience, and engineering scope..."
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div className="form-group">
+                  <label htmlFor="editStatus">Project Status</label>
+                  <select id="editStatus" className="input-field" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
+                    <option value="PLANNING">PLANNING</option>
+                    <option value="IN_PROGRESS">IN_PROGRESS</option>
+                    <option value="COMPLETED">COMPLETED</option>
+                    <option value="ON_HOLD">ON_HOLD</option>
+                    <option value="ARCHIVED">ARCHIVED</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="editTargetDate">Target Completion Date</label>
+                  <input
+                    id="editTargetDate"
+                    type="date"
+                    className="input-field"
+                    value={editTargetDate}
+                    onChange={(e) => setEditTargetDate(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Repository & Demo Links */}
+            <div className="card" style={{ marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+                Repository & Deployment Links
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                <div className="form-group">
+                  <label htmlFor="editGithubUrl">GitHub Repository URL</label>
+                  <input
+                    id="editGithubUrl"
+                    type="url"
+                    className="input-field"
+                    placeholder="https://github.com/org/repo"
+                    value={editGithubUrl}
+                    onChange={(e) => setEditGithubUrl(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="editDemoUrl">Live Demo / Staging URL</label>
+                  <input
+                    id="editDemoUrl"
+                    type="url"
+                    className="input-field"
+                    placeholder="https://demo.app.com"
+                    value={editDemoUrl}
+                    onChange={(e) => setEditDemoUrl(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Architecture & Tech Stack Builder */}
+            <div className="card" style={{ marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+                Architecture & Tech Stack Builder
+              </h3>
+              <VisualTechStackEditor value={editTechStack} onChange={setEditTechStack} />
+            </div>
+
+            {/* Save Action Bar */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              <button type="submit" className="btn btn-primary" disabled={savingProject}>
+                {savingProject ? 'Saving Changes...' : 'Save Project Settings'}
+              </button>
+            </div>
+          </form>
+
+          {/* Card 4: Danger Zone (Project Owner / Admin Controls) */}
+          {isCreatorOrAdmin && (
+            <div className="card" style={{ borderColor: 'var(--status-blocked)', backgroundColor: 'rgba(239, 68, 68, 0.03)' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--status-blocked)', marginBottom: '0.5rem' }}>
+                Danger Zone (Project Owner Controls)
+              </h3>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+                Archive or permanently delete this project. Only the project creator or system administrator can perform these actions.
+              </p>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ color: 'var(--status-blocked)', borderColor: 'var(--status-blocked)' }}
+                  onClick={handleArchiveProject}
+                >
+                  <Archive size={14} />
+                  <span>{project.status === 'ARCHIVED' ? 'Unarchive Project' : 'Archive Project'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ backgroundColor: 'var(--status-blocked)', color: '#ffffff', borderColor: 'var(--status-blocked)' }}
+                  onClick={handleDeleteProject}
+                >
+                  <Trash2 size={14} />
+                  <span>Delete Project Permanently</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Edit Deliverable Modal */}
       <Modal isOpen={!!editingDeliverable} onClose={() => setEditingDeliverable(null)} title={`Update: ${editingDeliverable?.name}`}>
         <form onSubmit={handleSaveDeliverable}>
@@ -804,195 +964,6 @@ export const ProjectDetailPage: React.FC = () => {
             </button>
             <button type="submit" className="btn btn-primary" disabled={!newMemberId}>
               Add Member
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Edit Project Details Modal */}
-      <Modal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} title="Edit Project Details">
-        <form onSubmit={handleSaveProjectDetails}>
-          <div className="form-group">
-            <label htmlFor="editName">Project Name *</label>
-            <input
-              id="editName"
-              type="text"
-              className="input-field"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="editDescription">Description</label>
-            <textarea
-              id="editDescription"
-              className="input-field"
-              rows={3}
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Architecture & Tech Stack Builder</label>
-            <VisualTechStackEditor value={editTechStack} onChange={setEditTechStack} />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <div className="form-group">
-              <label htmlFor="editStatus">Project Status</label>
-              <select id="editStatus" className="input-field" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
-                <option value="PLANNING">PLANNING</option>
-                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                <option value="COMPLETED">COMPLETED</option>
-                <option value="ON_HOLD">ON_HOLD</option>
-                <option value="ARCHIVED">ARCHIVED</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="editTargetDate">Target Completion Date</label>
-              <input
-                id="editTargetDate"
-                type="date"
-                className="input-field"
-                value={editTargetDate}
-                onChange={(e) => setEditTargetDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <div className="form-group">
-              <label htmlFor="editGithubUrl">GitHub Repository URL</label>
-              <input
-                id="editGithubUrl"
-                type="url"
-                className="input-field"
-                placeholder="https://github.com/org/repo"
-                value={editGithubUrl}
-                onChange={(e) => setEditGithubUrl(e.target.value)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="editDemoUrl">Live Demo URL</label>
-              <input
-                id="editDemoUrl"
-                type="url"
-                className="input-field"
-                placeholder="https://demo.app.com"
-                value={editDemoUrl}
-                onChange={(e) => setEditDemoUrl(e.target.value)}
-              />
-            </div>
-          </div>
-          {/* Team Members Management inside Edit Modal (TEAM projects only) */}
-          {project.type === 'TEAM' && (
-            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
-              <label style={{ fontWeight: 700, fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block' }}>
-                Project Team Members ({project.members?.length || 0})
-              </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                {project.members?.map((m) => (
-                  <span
-                    key={m.id}
-                    style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      padding: '0.25rem 0.6rem',
-                      borderRadius: '16px',
-                      backgroundColor: 'var(--bg-surface-secondary)',
-                      border: '1px solid var(--border-color)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.375rem',
-                    }}
-                  >
-                    <span>{m.user.name}</span>
-                    {m.user.id !== project.createdById && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMember(m.user.id)}
-                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--status-blocked)', padding: 0, display: 'flex' }}
-                        title="Remove member"
-                      >
-                        <UserMinus size={12} />
-                      </button>
-                    )}
-                  </span>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <div style={{ flex: 1 }}>
-                  <UserSearchSelect
-                    users={allUsers.filter((u) => u.role !== 'ADMIN' && !project.members.some((m) => m.userId === u.id))}
-                    selectedUserId={newMemberId}
-                    onSelectUser={setNewMemberId}
-                    placeholder="Search member by name or email..."
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  disabled={!newMemberId}
-                  onClick={async () => {
-                    if (!id || !newMemberId) return;
-                    try {
-                      await api.addProjectMembers(id, [newMemberId]);
-                      setNewMemberId('');
-                      await loadProject();
-                    } catch (err: any) {
-                      alert(err.message || 'Failed to add member');
-                    }
-                  }}
-                >
-                  <Plus size={14} />
-                  <span>Add Member</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Project Creator & Admin Danger Zone (Archive & Delete) */}
-          {isCreatorOrAdmin && (
-            <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
-              <label style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--status-blocked)', marginBottom: '0.5rem', display: 'block' }}>
-                Danger Zone (Project Owner Controls)
-              </label>
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={handleArchiveProject}
-                  style={{ fontSize: '0.8125rem' }}
-                >
-                  <Archive size={14} />
-                  <span>{project.status === 'ARCHIVED' ? 'Unarchive Project' : 'Archive Project'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={handleDeleteProject}
-                  style={{ color: 'var(--status-blocked)', borderColor: 'var(--status-blocked)', fontSize: '0.8125rem' }}
-                >
-                  <Trash2 size={14} />
-                  <span>Delete Project</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-            <button type="button" className="btn btn-secondary" onClick={() => setEditModalOpen(false)}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={savingProject}>
-              {savingProject ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>
