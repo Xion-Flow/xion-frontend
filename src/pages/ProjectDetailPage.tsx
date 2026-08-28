@@ -10,6 +10,7 @@ import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 import { TechStackBadges } from '../components/TechStackBadges';
 import { VisualTechStackEditor } from '../components/VisualTechStackEditor';
+import { UserSearchSelect } from '../components/UserSearchSelect';
 
 export const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -676,22 +677,20 @@ export const ProjectDetailPage: React.FC = () => {
       <Modal isOpen={addMemberModalOpen} onClose={() => setAddMemberModalOpen(false)} title="Add Team Member to Project">
         <form onSubmit={handleAddMember}>
           <div className="form-group">
-            <label>Select User</label>
-            <select className="input-field" value={newMemberId} onChange={(e) => setNewMemberId(e.target.value)} required>
-              <option value="">-- Choose User --</option>
-              {allUsers
-                .filter((u) => u.role !== 'ADMIN' && !project.members.some((m) => m.userId === u.id))
-                .map((u) => (
-                  <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-                ))}
-            </select>
+            <label>Search & Select User by Name or Email</label>
+            <UserSearchSelect
+              users={allUsers.filter((u) => u.role !== 'ADMIN' && !project.members.some((m) => m.userId === u.id))}
+              selectedUserId={newMemberId}
+              onSelectUser={setNewMemberId}
+              placeholder="Type user name or email to search..."
+            />
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>
             <button type="button" className="btn btn-secondary" onClick={() => setAddMemberModalOpen(false)}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
+            <button type="submit" className="btn btn-primary" disabled={!newMemberId}>
               Add Member
             </button>
           </div>
@@ -816,21 +815,14 @@ export const ProjectDetailPage: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <select
-                  className="input-field"
-                  style={{ fontSize: '0.8125rem', padding: '0.375rem 0.625rem' }}
-                  value={newMemberId}
-                  onChange={(e) => setNewMemberId(e.target.value)}
-                >
-                  <option value="">-- Add New Member --</option>
-                  {allUsers
-                    .filter((u) => u.role !== 'ADMIN' && !project.members.some((m) => m.userId === u.id))
-                    .map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name} ({u.email})
-                      </option>
-                    ))}
-                </select>
+                <div style={{ flex: 1 }}>
+                  <UserSearchSelect
+                    users={allUsers.filter((u) => u.role !== 'ADMIN' && !project.members.some((m) => m.userId === u.id))}
+                    selectedUserId={newMemberId}
+                    onSelectUser={setNewMemberId}
+                    placeholder="Search member by name or email..."
+                  />
+                </div>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
@@ -847,7 +839,7 @@ export const ProjectDetailPage: React.FC = () => {
                   }}
                 >
                   <Plus size={14} />
-                  <span>Add</span>
+                  <span>Add Member</span>
                 </button>
               </div>
             </div>

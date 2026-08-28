@@ -9,6 +9,7 @@ import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 import { TechStackBadges } from '../components/TechStackBadges';
 import { VisualTechStackEditor } from '../components/VisualTechStackEditor';
+import { UserSearchSelect } from '../components/UserSearchSelect';
 
 export const ProjectsPage = () => {
   const { user } = useAuth();
@@ -388,103 +389,47 @@ export const ProjectsPage = () => {
           </div>
 
           {projectType === 'TEAM' && (
-            <div className="form-group" style={{ position: 'relative' }}>
-              <label htmlFor="searchMember">Search Team Members by Handle (@username) or Name</label>
-              <input
-                id="searchMember"
-                type="text"
-                className="input-field"
-                placeholder="Type @username or name (e.g. alex_dev)..."
-                value={memberSearchQuery}
-                onChange={(e) => setMemberSearchQuery(e.target.value)}
+            <div className="form-group">
+              <label>Search & Select Team Members by Name or Email</label>
+              <UserSearchSelect
+                users={users.filter((u) => u.id !== user?.id && u.role !== 'ADMIN' && !selectedMembers.some((m) => m.id === u.id))}
+                selectedUserId=""
+                onSelectUser={(selectedId) => {
+                  const found = users.find((u) => u.id === selectedId);
+                  if (found) {
+                    setSelectedMembers((prev) => [...prev, found]);
+                  }
+                }}
+                placeholder="Type name or email to add team members..."
               />
-
-              {/* Dropdown Live Search Results */}
-              {memberSearchQuery.trim() !== '' && (
-                <div
-                  className="card"
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    top: '100%',
-                    zIndex: 200,
-                    marginTop: '0.25rem',
-                    maxHeight: '180px',
-                    overflowY: 'auto',
-                    padding: '0.5rem',
-                    boxShadow: 'var(--shadow-lg)',
-                  }}
-                >
-                  {searchingMembers ? (
-                    <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.5rem' }}>Searching...</p>
-                  ) : memberSearchResults.length === 0 ? (
-                    <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.5rem' }}>No matching users found.</p>
-                  ) : (
-                    memberSearchResults.map((u) => (
-                      <div
-                        key={u.id}
-                        onClick={() => {
-                          setSelectedMembers((prev) => [...prev, u]);
-                          setMemberSearchQuery('');
-                          setMemberSearchResults([]);
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.75rem',
-                          padding: '0.5rem 0.75rem',
-                          borderRadius: 'var(--radius-sm)',
-                          cursor: 'pointer',
-                        }}
-                        className="btn-secondary"
-                      >
-                        <img
-                          src={u.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`}
-                          alt={u.name}
-                          style={{ width: '28px', height: '28px', borderRadius: '50%' }}
-                        />
-                        <div>
-                          <p style={{ fontSize: '0.84375rem', fontWeight: 700, color: 'var(--text-primary)' }}>{u.name}</p>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>@{u.username}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
 
               {/* Selected Members Chips */}
               {selectedMembers.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
                   {selectedMembers.map((m) => (
-                    <div
+                    <span
                       key={m.id}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.25rem 0.625rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        padding: '0.25rem 0.6rem',
+                        borderRadius: '16px',
                         backgroundColor: 'var(--bg-surface-secondary)',
                         border: '1px solid var(--border-color)',
-                        borderRadius: '16px',
-                        fontSize: '0.8125rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
                       }}
                     >
-                      <img
-                        src={m.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.name}`}
-                        alt={m.name}
-                        style={{ width: '20px', height: '20px', borderRadius: '50%' }}
-                      />
-                      <span style={{ fontWeight: 600 }}>{m.name} (@{m.username})</span>
+                      <span>{m.name} ({m.email})</span>
                       <button
                         type="button"
-                        onClick={() => setSelectedMembers((prev) => prev.filter((item) => item.id !== m.id))}
-                        style={{ background: 'none', border: 'none', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}
+                        onClick={() => setSelectedMembers((prev) => prev.filter((u) => u.id !== m.id))}
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--status-blocked)', padding: 0, display: 'flex' }}
                       >
-                        <X size={14} />
+                        <X size={12} />
                       </button>
-                    </div>
+                    </span>
                   ))}
                 </div>
               )}
