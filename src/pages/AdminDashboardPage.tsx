@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, UserPlus, Users, FolderKanban, CheckCircle2, KeyRound } from 'lucide-react';
+import { ShieldCheck, UserPlus, Users, FolderKanban, CheckCircle2, KeyRound, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { User, AdminStats, Project } from '../types';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 
 export const AdminDashboardPage: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -86,11 +88,31 @@ export const AdminDashboardPage: React.FC = () => {
   };
 
   const handleToggleUserActive = async (u: User) => {
+    if (u.id === currentUser?.id) {
+      alert('You cannot deactivate your own admin account.');
+      return;
+    }
     try {
       await api.updateUser(u.id, { isActive: !u.isActive });
       await loadAdminData();
     } catch (err: any) {
       alert(err.message || 'Failed to update user status.');
+    }
+  };
+
+  const handleDeleteUser = async (u: User) => {
+    if (u.id === currentUser?.id) {
+      alert('You cannot delete your own admin account.');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to permanently delete user account '${u.name}' (${u.email})?`)) {
+      return;
+    }
+    try {
+      await api.deleteUser(u.id);
+      await loadAdminData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete user account.');
     }
   };
 
@@ -205,9 +227,26 @@ export const AdminDashboardPage: React.FC = () => {
                         <KeyRound size={14} />
                         <span>Reset Password</span>
                       </button>
-                      <button className="btn btn-secondary btn-sm" onClick={() => handleToggleUserActive(u)}>
-                        {u.isActive ? 'Deactivate' : 'Activate'}
-                      </button>
+                      {u.id === currentUser?.id ? (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, padding: '0.25rem 0.5rem', borderRadius: '4px', backgroundColor: 'var(--bg-surface-secondary)' }}>
+                          Self Account
+                        </span>
+                      ) : (
+                        <>
+                          <button className="btn btn-secondary btn-sm" onClick={() => handleToggleUserActive(u)}>
+                            {u.isActive ? 'Deactivate' : 'Activate'}
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            style={{ color: 'var(--status-blocked)', borderColor: 'var(--status-blocked)' }}
+                            onClick={() => handleDeleteUser(u)}
+                            title="Delete User Account"
+                          >
+                            <Trash2 size={14} />
+                            <span>Delete</span>
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -108,6 +108,14 @@ export const api = {
     return handleResponse<{ user: User }>(res);
   },
 
+  async deleteUser(id: string) {
+    const res = await fetch(`${API_BASE}/users/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeader(),
+    });
+    return handleResponse<{ message: string }>(res);
+  },
+
   // Projects
   async getProjects() {
     const res = await fetch(`${API_BASE}/projects`, {
