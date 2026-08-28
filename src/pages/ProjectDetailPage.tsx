@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { CheckSquare, Users, FileText, Code, Plus, ArrowLeft, Radio, Pencil } from 'lucide-react';
+import { CheckSquare, Users, FileText, Code, Plus, ArrowLeft, Radio, Pencil, UserMinus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { api } from '../services/api';
@@ -44,7 +44,7 @@ export const ProjectDetailPage: React.FC = () => {
   const [addMemberModalOpen, setAddMemberModalOpen] = useState(false);
   const [newMemberId, setNewMemberId] = useState('');
 
-  const canManageTeam = user?.role === 'ADMIN' || (user?.role as string) === 'TEAM_LEADER';
+  const canManageTeam = user?.role === 'ADMIN' || project?.createdById === user?.id || (project?.members?.some((m) => m.userId === user?.id) ?? false);
 
   const loadProject = async () => {
     if (!id) return;
@@ -178,9 +178,21 @@ export const ProjectDetailPage: React.FC = () => {
       await api.addProjectMembers(id, [newMemberId]);
       setAddMemberModalOpen(false);
       setNewMemberId('');
-      await loadProject();
     } catch (err: any) {
       alert(err.message || 'Failed to add team member.');
+    }
+  };
+
+  const handleRemoveMember = async (targetUserId: string) => {
+    if (!id) return;
+    if (!window.confirm('Are you sure you want to remove this member from the project team?')) {
+      return;
+    }
+    try {
+      await api.removeProjectMember(id, targetUserId);
+      await loadProject();
+    } catch (err: any) {
+      alert(err.message || 'Failed to remove team member.');
     }
   };
 
@@ -474,17 +486,31 @@ export const ProjectDetailPage: React.FC = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
             {project.members.map((m) => (
-              <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}>
-                <img
-                  src={m.user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.user.name}`}
-                  alt={m.user.name}
-                  style={{ width: '40px', height: '40px', borderRadius: '50%' }}
-                />
-                <div>
-                  <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--text-primary)' }}>{m.user.name}</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{m.user.email}</p>
-                  <Badge status="IN_PROGRESS" label={m.role} />
+              <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                  <img
+                    src={m.user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.user.name}`}
+                    alt={m.user.name}
+                    style={{ width: '40px', height: '40px', borderRadius: '50%' }}
+                  />
+                  <div>
+                    <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--text-primary)' }}>{m.user.name}</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{m.user.email}</p>
+                    <Badge status="IN_PROGRESS" label={m.role} />
+                  </div>
                 </div>
+
+                {m.user.id !== project.createdById && canManageTeam && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ color: 'var(--status-blocked)', borderColor: 'var(--status-blocked)' }}
+                    onClick={() => handleRemoveMember(m.user.id)}
+                    title="Remove member from project"
+                  >
+                    <UserMinus size={14} />
+                    <span>Remove</span>
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -694,6 +720,78 @@ export const ProjectDetailPage: React.FC = () => {
                 value={editDemoUrl}
                 onChange={(e) => setEditDemoUrl(e.target.value)}
               />
+            </div>
+          </div>
+          {/* Team Members Management inside Edit Modal */}
+          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+            <label style={{ fontWeight: 700, fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block' }}>
+              Project Team Members ({project.members?.length || 0})
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              {project.members?.map((m) => (
+                <span
+                  key={m.id}
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    padding: '0.25rem 0.6rem',
+                    borderRadius: '16px',
+                    backgroundColor: 'var(--bg-surface-secondary)',
+                    border: '1px solid var(--border-color)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.375rem',
+                  }}
+                >
+                  <span>{m.user.name}</span>
+                  {m.user.id !== project.createdById && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMember(m.user.id)}
+                      style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--status-blocked)', padding: 0, display: 'flex' }}
+                      title="Remove member"
+                    >
+                      <UserMinus size={12} />
+                    </button>
+                  )}
+                </span>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <select
+                className="input-field"
+                style={{ fontSize: '0.8125rem', padding: '0.375rem 0.625rem' }}
+                value={newMemberId}
+                onChange={(e) => setNewMemberId(e.target.value)}
+              >
+                <option value="">-- Add New Member --</option>
+                {allUsers
+                  .filter((u) => u.role !== 'ADMIN' && !project.members.some((m) => m.userId === u.id))
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.email})
+                    </option>
+                  ))}
+              </select>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={!newMemberId}
+                onClick={async () => {
+                  if (!id || !newMemberId) return;
+                  try {
+                    await api.addProjectMembers(id, [newMemberId]);
+                    setNewMemberId('');
+                    await loadProject();
+                  } catch (err: any) {
+                    alert(err.message || 'Failed to add member');
+                  }
+                }}
+              >
+                <Plus size={14} />
+                <span>Add</span>
+              </button>
             </div>
           </div>
 
