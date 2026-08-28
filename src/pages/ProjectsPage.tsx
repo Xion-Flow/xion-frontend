@@ -7,6 +7,7 @@ import { Project, ProjectType, User } from '../types';
 import { ProgressBar } from '../components/ProgressBar';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
+import { TechStackBadges } from '../components/TechStackBadges';
 
 export const ProjectsPage = () => {
   const { user } = useAuth();
@@ -222,15 +223,14 @@ export const ProjectsPage = () => {
                   {p.description || 'No project description provided.'}
                 </p>
 
-                {(p.techStack || p.githubUrl || p.demoUrl) && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem', fontSize: '0.8125rem', marginBottom: '1.25rem' }}>
-                    {p.techStack && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
-                        <Code size={16} />
-                        <span>{p.techStack}</span>
-                      </div>
-                    )}
+                {p.techStack && (
+                  <div style={{ marginBottom: '0.875rem' }}>
+                    <TechStackBadges techStack={p.techStack} compact />
+                  </div>
+                )}
 
+                {(p.githubUrl || p.demoUrl) && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem', fontSize: '0.8125rem', marginBottom: '1.25rem' }}>
                     {p.githubUrl && (
                       <a
                         href={p.githubUrl}
@@ -351,15 +351,18 @@ export const ProjectsPage = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="techStack">Tech Stack</label>
-            <input
+            <label htmlFor="techStack">Tech Stack (Categorized)</label>
+            <textarea
               id="techStack"
-              type="text"
               className="input-field"
-              placeholder="e.g. React, Node.js, PostgreSQL, Docker"
+              rows={3}
+              placeholder="e.g.&#10;Frontend -> React.js, Vite, Tailwind CSS&#10;Backend -> Python, FastAPI&#10;AI / NLP -> Gemini API, LangChain"
               value={techStack}
               onChange={(e) => setTechStack(e.target.value)}
             />
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
+              💡 Tip: Format as <code>Category -&gt; Tech1, Tech2</code> (e.g. <code>Frontend -&gt; React, Vite</code>) or simple list.
+            </span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>

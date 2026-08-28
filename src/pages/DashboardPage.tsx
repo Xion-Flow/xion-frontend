@@ -6,6 +6,7 @@ import { api } from '../services/api';
 import { Project, ProjectDeliverable } from '../types';
 import { ProgressBar } from '../components/ProgressBar';
 import { Badge } from '../components/Badge';
+import { TechStackBadges } from '../components/TechStackBadges';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -152,9 +153,15 @@ export const DashboardPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <p style={{ fontSize: '0.84375rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineClamp: 2 }}>
+                  <p style={{ fontSize: '0.84375rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineClamp: 2 }}>
                     {p.description || 'No description provided.'}
                   </p>
+
+                  {p.techStack && (
+                    <div style={{ marginBottom: '0.875rem' }}>
+                      <TechStackBadges techStack={p.techStack} compact />
+                    </div>
+                  )}
 
                   <div style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginBottom: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.375rem' }}>

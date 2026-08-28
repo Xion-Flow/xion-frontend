@@ -8,6 +8,7 @@ import { Project, ProjectDeliverable, User } from '../types';
 import { ProgressBar } from '../components/ProgressBar';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
+import { TechStackBadges } from '../components/TechStackBadges';
 
 export const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -243,9 +244,11 @@ export const ProjectDetailPage: React.FC = () => {
         </div>
 
         {project.techStack && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.84375rem', color: 'var(--accent-primary)', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
-            <Code size={16} />
-            <span style={{ fontWeight: 600 }}>Tech Stack: {project.techStack}</span>
+          <div style={{ paddingTop: '0.875rem', marginTop: '0.875rem', borderTop: '1px solid var(--border-color)' }}>
+            <p style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+              Architecture & Tech Stack
+            </p>
+            <TechStackBadges techStack={project.techStack} />
           </div>
         )}
       </div>
