@@ -251,16 +251,7 @@ export const ProjectDetailPage: React.FC = () => {
     }
   };
 
-  const openEditModal = (p: Project) => {
-    setEditName(p.name || '');
-    setEditDescription(p.description || '');
-    setEditTechStack(p.techStack || '');
-    setEditStatus(p.status || 'IN_PROGRESS');
-    setEditGithubUrl(p.githubUrl || '');
-    setEditDemoUrl(p.demoUrl || '');
-    setEditTargetDate(p.targetDate ? p.targetDate.split('T')[0] : '');
-    setEditModalOpen(true);
-  };
+
 
   const handleSaveProjectDetails = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -727,19 +718,13 @@ export const ProjectDetailPage: React.FC = () => {
       {/* TAB 4: ARCHITECTURE & TECH STACK */}
       {activeTab === 'techstack' && (
         <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-            <div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Architecture & Tech Stack
-              </h3>
-              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                Categorized framework components, databases, tools, and deployment infrastructure.
-              </p>
-            </div>
-            <button className="btn btn-secondary btn-sm" onClick={() => openEditModal(project)}>
-              <Pencil size={14} />
-              <span>Edit Tech Stack</span>
-            </button>
+          <div style={{ marginBottom: '1.25rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Architecture & Tech Stack
+            </h3>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+              Categorized framework components, databases, tools, and deployment infrastructure.
+            </p>
           </div>
 
           <TechStackBadges techStack={project.techStack} />
