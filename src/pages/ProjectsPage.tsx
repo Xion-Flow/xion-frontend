@@ -223,12 +223,6 @@ export const ProjectsPage = () => {
                   {p.description || 'No project description provided.'}
                 </p>
 
-                {p.techStack && (
-                  <div style={{ marginBottom: '0.875rem' }}>
-                    <TechStackBadges techStack={p.techStack} compact />
-                  </div>
-                )}
-
                 {(p.githubUrl || p.demoUrl) && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem', fontSize: '0.8125rem', marginBottom: '1.25rem' }}>
                     {p.githubUrl && (
