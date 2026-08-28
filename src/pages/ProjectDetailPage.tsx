@@ -199,6 +199,19 @@ export const ProjectDetailPage: React.FC = () => {
     }
   };
 
+  const handleLeaveProject = async () => {
+    if (!id || !user) return;
+    if (!window.confirm('Are you sure you want to leave this project? You will lose access to project deliverables.')) {
+      return;
+    }
+    try {
+      await api.removeProjectMember(id, user.id);
+      window.location.href = '/projects';
+    } catch (err: any) {
+      alert(err.message || 'Failed to leave project.');
+    }
+  };
+
   const handleArchiveProject = async () => {
     if (!id || !project) return;
     const isArchived = project.status === 'ARCHIVED';
@@ -529,36 +542,135 @@ export const ProjectDetailPage: React.FC = () => {
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
-            {project.members.map((m) => (
-              <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                  <img
-                    src={m.user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.user.name}`}
-                    alt={m.user.name}
-                    style={{ width: '40px', height: '40px', borderRadius: '50%' }}
-                  />
-                  <div>
-                    <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--text-primary)' }}>{m.user.name}</p>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{m.user.email}</p>
-                    <Badge status="IN_PROGRESS" label={m.role} />
-                  </div>
-                </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+            {project.members.map((m) => {
+              const isSelf = m.user.id === user?.id;
+              const isCreator = m.user.id === project.createdById;
+              const isLeaderOrAdmin = user?.role === 'ADMIN' || project.createdById === user?.id;
 
-                {m.user.id !== project.createdById && canManageTeam && (
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    style={{ color: 'var(--status-blocked)', borderColor: 'var(--status-blocked)' }}
-                    onClick={() => handleRemoveMember(m.user.id)}
-                    title="Remove member from project"
-                  >
-                    <UserMinus size={14} />
-                    <span>Remove</span>
-                  </button>
-                )}
-              </div>
-            ))}
+              return (
+                <div
+                  key={m.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.875rem',
+                    border: isSelf ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: isSelf ? 'var(--bg-surface-secondary)' : 'transparent',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                    <img
+                      src={m.user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.user.name}`}
+                      alt={m.user.name}
+                      style={{ width: '40px', height: '40px', borderRadius: '50%' }}
+                    />
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                        <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--text-primary)' }}>{m.user.name}</p>
+                        {isSelf && (
+                          <span
+                            style={{
+                              fontSize: '0.6875rem',
+                              fontWeight: 700,
+                              padding: '0.1rem 0.4rem',
+                              borderRadius: '10px',
+                              backgroundColor: 'var(--accent-primary)',
+                              color: '#ffffff',
+                            }}
+                          >
+                            You
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{m.user.email}</p>
+                      <Badge status="IN_PROGRESS" label={isCreator ? 'PROJECT LEAD' : m.role} />
+                    </div>
+                  </div>
+
+                  {/* Leader/Admin can remove non-creator members */}
+                  {isLeaderOrAdmin && !isCreator && !isSelf && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ color: 'var(--status-blocked)', borderColor: 'var(--status-blocked)' }}
+                      onClick={() => handleRemoveMember(m.user.id)}
+                      title="Remove member from project"
+                    >
+                      <UserMinus size={14} />
+                      <span>Remove</span>
+                    </button>
+                  )}
+
+                  {/* Non-creator member can leave project */}
+                  {isSelf && !isCreator && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ color: 'var(--status-blocked)', borderColor: 'var(--status-blocked)' }}
+                      onClick={handleLeaveProject}
+                      title="Leave this project"
+                    >
+                      <UserMinus size={14} />
+                      <span>Leave</span>
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
+
+          {/* Pending Invitations Section */}
+          {project.invites && project.invites.length > 0 && (
+            <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-color)' }}>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.875rem' }}>
+                Pending Join Invitations ({project.invites.length})
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                {project.invites.map((inv) => (
+                  <div
+                    key={inv.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.875rem',
+                      border: '1px dashed var(--border-color)',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: 'var(--bg-surface-secondary)',
+                      opacity: 0.9,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <img
+                        src={inv.invitee?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${inv.invitee?.name}`}
+                        alt={inv.invitee?.name || 'User'}
+                        style={{ width: '36px', height: '36px', borderRadius: '50%' }}
+                      />
+                      <div>
+                        <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{inv.invitee?.name}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{inv.invitee?.email}</p>
+                        <span
+                          style={{
+                            fontSize: '0.6875rem',
+                            fontWeight: 700,
+                            color: 'var(--status-not-started)',
+                            backgroundColor: 'var(--status-not-started-bg)',
+                            padding: '0.1rem 0.4rem',
+                            borderRadius: '4px',
+                            display: 'inline-block',
+                            marginTop: '0.2rem',
+                          }}
+                        >
+                          INVITE PENDING
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

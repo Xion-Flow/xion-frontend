@@ -3,10 +3,11 @@ import { Link, Navigate } from 'react-router-dom';
 import { FolderKanban, CheckSquare, Clock, ArrowRight, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { Project, ProjectDeliverable } from '../types';
+import { Project, ProjectDeliverable, ProjectInvite } from '../types';
 import { ProgressBar } from '../components/ProgressBar';
 import { Badge } from '../components/Badge';
 import { TechStackBadges } from '../components/TechStackBadges';
+import { UserPlus, Check, X } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -15,24 +16,39 @@ export const DashboardPage: React.FC = () => {
   }
   const [projects, setProjects] = useState<Project[]>([]);
   const [myWork, setMyWork] = useState<ProjectDeliverable[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<ProjectInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [projRes, workRes] = await Promise.all([api.getProjects(), api.getMyWork('PENDING')]);
-        setProjects(projRes.projects);
-        setMyWork(workRes.deliverables);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load dashboard data.');
-      } finally {
-        setLoading(false);
-      }
+  const loadData = async () => {
+    try {
+      const [projRes, workRes, notifRes] = await Promise.all([
+        api.getProjects(),
+        api.getMyWork('PENDING'),
+        api.getNotifications(),
+      ]);
+      setProjects(projRes.projects);
+      setMyWork(workRes.deliverables);
+      setPendingInvites(notifRes.pendingInvites || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load dashboard data.');
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     loadData();
   }, []);
+
+  const handleRespondInvite = async (inviteId: string, action: 'ACCEPT' | 'DECLINE') => {
+    try {
+      await api.respondToInvite(inviteId, action);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to respond to invitation.');
+    }
+  };
 
   const handleToggleComplete = async (deliverableId: string, currentStatus: string) => {
     try {
@@ -70,6 +86,77 @@ export const DashboardPage: React.FC = () => {
           Here is your development roadmap overview and immediate task queue.
         </p>
       </div>
+
+      {/* Pending Project Join Requests Banner */}
+      {pendingInvites.length > 0 && (
+        <div
+          className="card"
+          style={{
+            backgroundColor: 'var(--status-in-progress-bg)',
+            border: '1.5px solid var(--status-in-progress)',
+            marginBottom: '1.5rem',
+            padding: '1rem 1.25rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+            <UserPlus size={22} style={{ color: 'var(--status-in-progress)' }} />
+            <div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                Pending Project Join Invitations ({pendingInvites.length})
+              </h3>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                You have been invited to join the following project teams. Accept to access project workflows.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {pendingInvites.map((invite) => (
+              <div
+                key={invite.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  backgroundColor: 'var(--bg-surface)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-color)',
+                }}
+              >
+                <div>
+                  <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Project: {invite.project?.name}
+                  </p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Invited by {invite.inviter?.name} (@{invite.inviter?.username})
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => handleRespondInvite(invite.id, 'DECLINE')}
+                    className="btn btn-secondary btn-sm"
+                    style={{ color: 'var(--status-blocked)' }}
+                  >
+                    <X size={14} />
+                    <span>Decline</span>
+                  </button>
+                  <button
+                    onClick={() => handleRespondInvite(invite.id, 'ACCEPT')}
+                    className="btn btn-primary btn-sm"
+                  >
+                    <Check size={14} />
+                    <span>Accept & Join</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="card" style={{ backgroundColor: 'var(--status-blocked-bg)', color: 'var(--status-blocked)', marginBottom: '1.5rem' }}>

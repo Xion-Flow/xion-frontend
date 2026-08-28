@@ -123,6 +123,7 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   members: ProjectMember[];
+  invites?: ProjectInvite[];
   phases?: ProjectPhase[];
   progress?: number;
   currentPhase?: {
