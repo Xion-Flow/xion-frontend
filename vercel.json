@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://xion-backend.onrender.com/api/:path*"
+      "destination": "https://xion-backend-y8kb.onrender.com/api/:path*"
     },
     {
       "source": "/socket.io/:path*",
-      "destination": "https://xion-backend.onrender.com/socket.io/:path*"
+      "destination": "https://xion-backend-y8kb.onrender.com/socket.io/:path*"
     },
     {
       "source": "/(.*)",
