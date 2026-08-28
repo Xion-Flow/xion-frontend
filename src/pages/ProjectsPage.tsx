@@ -8,6 +8,7 @@ import { ProgressBar } from '../components/ProgressBar';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 import { TechStackBadges } from '../components/TechStackBadges';
+import { VisualTechStackEditor } from '../components/VisualTechStackEditor';
 
 export const ProjectsPage = () => {
   const { user } = useAuth();
@@ -345,18 +346,8 @@ export const ProjectsPage = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="techStack">Tech Stack (Categorized)</label>
-            <textarea
-              id="techStack"
-              className="input-field"
-              rows={3}
-              placeholder="e.g.&#10;Frontend -> React.js, Vite, Tailwind CSS&#10;Backend -> Python, FastAPI&#10;AI / NLP -> Gemini API, LangChain"
-              value={techStack}
-              onChange={(e) => setTechStack(e.target.value)}
-            />
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
-              💡 Tip: Format as <code>Category -&gt; Tech1, Tech2</code> (e.g. <code>Frontend -&gt; React, Vite</code>) or simple list.
-            </span>
+            <label>Architecture & Tech Stack Builder</label>
+            <VisualTechStackEditor value={techStack} onChange={setTechStack} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>

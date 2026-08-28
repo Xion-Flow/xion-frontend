@@ -9,6 +9,7 @@ import { ProgressBar } from '../components/ProgressBar';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 import { TechStackBadges } from '../components/TechStackBadges';
+import { VisualTechStackEditor } from '../components/VisualTechStackEditor';
 
 export const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,7 +17,7 @@ export const ProjectDetailPage: React.FC = () => {
   const { socket, isConnected, joinProject, leaveProject } = useSocket();
 
   const [project, setProject] = useState<Project | null>(null);
-  const [activeTab, setActiveTab] = useState<'roadmap' | 'team' | 'documents'>('roadmap');
+  const [activeTab, setActiveTab] = useState<'roadmap' | 'team' | 'documents' | 'techstack'>('roadmap');
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -278,16 +279,20 @@ export const ProjectDetailPage: React.FC = () => {
 
       {/* Project Header Banner */}
       <div className="card" style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.375rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
               <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
                 {project.name}
               </h1>
               <Badge status={project.status} />
-              <button className="btn btn-secondary btn-sm" style={{ marginLeft: '0.5rem' }} onClick={() => openEditModal(project)}>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => openEditModal(project)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontWeight: 700 }}
+              >
                 <Pencil size={14} />
-                <span>Edit Details</span>
+                <span>Edit Project</span>
               </button>
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', maxWidth: '720px' }}>
@@ -303,19 +308,10 @@ export const ProjectDetailPage: React.FC = () => {
             </p>
           </div>
         </div>
-
-        {project.techStack && (
-          <div style={{ paddingTop: '0.875rem', marginTop: '0.875rem', borderTop: '1px solid var(--border-color)' }}>
-            <p style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
-              Architecture & Tech Stack
-            </p>
-            <TechStackBadges techStack={project.techStack} />
-          </div>
-        )}
       </div>
 
       {/* Tab Navigation */}
-      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
         <button
           onClick={() => setActiveTab('roadmap')}
           className={`btn ${activeTab === 'roadmap' ? 'btn-primary' : 'btn-secondary'}`}
@@ -341,6 +337,15 @@ export const ProjectDetailPage: React.FC = () => {
         >
           <FileText size={16} />
           <span>Documents ({documentDeliverables.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('techstack')}
+          className={`btn ${activeTab === 'techstack' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }}
+        >
+          <Code size={16} />
+          <span>Tech Stack</span>
         </button>
       </div>
 
@@ -550,6 +555,28 @@ export const ProjectDetailPage: React.FC = () => {
         </div>
       )}
 
+      {/* TAB 4: ARCHITECTURE & TECH STACK */}
+      {activeTab === 'techstack' && (
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Architecture & Tech Stack
+              </h3>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                Categorized framework components, databases, tools, and deployment infrastructure.
+              </p>
+            </div>
+            <button className="btn btn-secondary btn-sm" onClick={() => openEditModal(project)}>
+              <Pencil size={14} />
+              <span>Edit Tech Stack</span>
+            </button>
+          </div>
+
+          <TechStackBadges techStack={project.techStack} />
+        </div>
+      )}
+
       {/* Edit Deliverable Modal */}
       <Modal isOpen={!!editingDeliverable} onClose={() => setEditingDeliverable(null)} title={`Update: ${editingDeliverable?.name}`}>
         <form onSubmit={handleSaveDeliverable}>
@@ -659,18 +686,8 @@ export const ProjectDetailPage: React.FC = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="editTechStack">Tech Stack (Categorized)</label>
-            <textarea
-              id="editTechStack"
-              className="input-field"
-              rows={4}
-              placeholder="e.g.&#10;Frontend -> React.js, Vite, Tailwind CSS&#10;Backend -> Python, FastAPI&#10;AI / NLP -> Gemini API"
-              value={editTechStack}
-              onChange={(e) => setEditTechStack(e.target.value)}
-            />
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
-              💡 Tip: Format as <code>Category -&gt; Tech1, Tech2</code> (e.g. <code>Frontend -&gt; React, Vite</code>)
-            </span>
+            <label>Architecture & Tech Stack Builder</label>
+            <VisualTechStackEditor value={editTechStack} onChange={setEditTechStack} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
