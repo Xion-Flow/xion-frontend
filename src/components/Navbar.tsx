@@ -143,66 +143,57 @@ export const Navbar: React.FC = () => {
           </span>
         </Link>
 
-        <nav className="nav-desktop-links" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {user.role === 'ADMIN' ? (
+        {user.role !== 'ADMIN' && (
+          <nav className="nav-desktop-links" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Link
-              to="/admin"
-              className={`btn ${isActive('/admin') ? 'btn-primary' : 'btn-secondary'}`}
+              to="/dashboard"
+              className={`btn ${isActive('/dashboard') ? 'btn-primary' : 'btn-secondary'}`}
               style={{ padding: '0.5rem 0.875rem' }}
             >
-              <ShieldAlert size={17} />
-              <span>User Management</span>
+              <LayoutDashboard size={17} />
+              <span>Dashboard</span>
             </Link>
-          ) : (
-            <>
-              <Link
-                to="/dashboard"
-                className={`btn ${isActive('/dashboard') ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ padding: '0.5rem 0.875rem' }}
-              >
-                <LayoutDashboard size={17} />
-                <span>Dashboard</span>
-              </Link>
 
-              <Link
-                to="/projects"
-                className={`btn ${isActive('/projects') ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ padding: '0.5rem 0.875rem' }}
-              >
-                <FolderKanban size={17} />
-                <span>Projects</span>
-              </Link>
+            <Link
+              to="/projects"
+              className={`btn ${isActive('/projects') ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '0.5rem 0.875rem' }}
+            >
+              <FolderKanban size={17} />
+              <span>Projects</span>
+            </Link>
 
-              <Link
-                to="/my-work"
-                className={`btn ${isActive('/my-work') ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ padding: '0.5rem 0.875rem' }}
-              >
-                <CheckSquare size={17} />
-                <span>My Work</span>
-              </Link>
+            <Link
+              to="/my-work"
+              className={`btn ${isActive('/my-work') ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '0.5rem 0.875rem' }}
+            >
+              <CheckSquare size={17} />
+              <span>My Work</span>
+            </Link>
 
-              <Link
-                to="/guide"
-                className={`btn ${isActive('/guide') ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ padding: '0.5rem 0.875rem' }}
-              >
-                <BookOpen size={17} />
-                <span>Guide</span>
-              </Link>
-            </>
-          )}
-        </nav>
+            <Link
+              to="/guide"
+              className={`btn ${isActive('/guide') ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '0.5rem 0.875rem' }}
+            >
+              <BookOpen size={17} />
+              <span>Guide</span>
+            </Link>
+          </nav>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="btn btn-secondary nav-mobile-toggle"
-            style={{ display: 'none', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}
-            title="Toggle Navigation Menu"
-          >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          {user.role !== 'ADMIN' && (
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="btn btn-secondary nav-mobile-toggle"
+              style={{ display: 'none', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}
+              title="Toggle Navigation Menu"
+            >
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          )}
           <button
             onClick={toggleTheme}
             className="btn btn-secondary"
@@ -212,15 +203,16 @@ export const Navbar: React.FC = () => {
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
 
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={handleToggleNotifications}
-              className="btn btn-secondary"
-              style={{ padding: '0.5rem', borderRadius: '50%', position: 'relative' }}
-              title="Notifications & Join Requests"
-            >
-              <Bell size={18} />
-              {unreadCount > 0 && (
+          {user.role !== 'ADMIN' && (
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={handleToggleNotifications}
+                className="btn btn-secondary"
+                style={{ padding: '0.5rem', borderRadius: '50%', position: 'relative' }}
+                title="Notifications & Join Requests"
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
                 <span
                   style={{
                     position: 'absolute',
@@ -348,8 +340,9 @@ export const Navbar: React.FC = () => {
               </div>
             )}
           </div>
+        )}
 
-          <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative' }}>
             <button
               onClick={() => {
                 setProfileOpen((prev) => !prev);
