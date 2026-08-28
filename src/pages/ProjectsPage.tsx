@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { Plus, FolderKanban, Users, Code, ArrowRight, X, Github, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -10,6 +10,9 @@ import { Modal } from '../components/Modal';
 
 export const ProjectsPage = () => {
   const { user } = useAuth();
+  if ((user?.role as string) === 'ADMIN') {
+    return <Navigate to="/admin" replace />;
+  }
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +37,7 @@ export const ProjectsPage = () => {
   const [memberSearchResults, setMemberSearchResults] = useState<User[]>([]);
   const [searchingMembers, setSearchingMembers] = useState(false);
 
-  const canCreateProject = user?.role !== 'ADMIN';
+  const canCreateProject = (user?.role as string) !== 'ADMIN';
 
   const loadData = async () => {
     try {

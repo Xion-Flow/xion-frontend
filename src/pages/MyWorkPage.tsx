@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { CheckSquare, CheckCircle2, Circle, Clock, FileText, AlertCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { ProjectDeliverable } from '../types';
 import { Badge } from '../components/Badge';
 
 export const MyWorkPage: React.FC = () => {
+  const { user } = useAuth();
+  if (user?.role === 'ADMIN') {
+    return <Navigate to="/admin" replace />;
+  }
   const [deliverables, setDeliverables] = useState<ProjectDeliverable[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<string>('createdAt');

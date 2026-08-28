@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { FolderKanban, CheckSquare, Clock, ArrowRight, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -9,6 +9,9 @@ import { Badge } from '../components/Badge';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
+  if (user?.role === 'ADMIN') {
+    return <Navigate to="/admin" replace />;
+  }
   const [projects, setProjects] = useState<Project[]>([]);
   const [myWork, setMyWork] = useState<ProjectDeliverable[]>([]);
   const [loading, setLoading] = useState(true);
