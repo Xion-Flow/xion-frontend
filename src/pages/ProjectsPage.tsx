@@ -64,7 +64,7 @@ export const ProjectsPage = () => {
       try {
         const res = await api.searchUsers(memberSearchQuery);
         const filtered = res.users.filter(
-          (u) => u.id !== user?.id && !selectedMembers.some((m) => m.id === u.id)
+          (u) => u.id !== user?.id && u.role !== 'ADMIN' && !selectedMembers.some((m) => m.id === u.id)
         );
         setMemberSearchResults(filtered);
       } catch (err) {

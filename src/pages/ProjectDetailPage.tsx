@@ -536,7 +536,7 @@ export const ProjectDetailPage: React.FC = () => {
             <select className="input-field" value={newMemberId} onChange={(e) => setNewMemberId(e.target.value)} required>
               <option value="">-- Choose User --</option>
               {allUsers
-                .filter((u) => !project.members.some((m) => m.userId === u.id))
+                .filter((u) => u.role !== 'ADMIN' && !project.members.some((m) => m.userId === u.id))
                 .map((u) => (
                   <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
                 ))}

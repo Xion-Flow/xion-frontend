@@ -15,7 +15,7 @@ import { GuidePage } from './pages/GuidePage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { ProfilePage } from './pages/ProfilePage';
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode; requireAdmin?: boolean }> = ({ children, requireAdmin }) => {
+const ProtectedRoute: React.FC<{ children: React.ReactNode; requireAdmin?: boolean; forbidAdmin?: boolean }> = ({ children, requireAdmin, forbidAdmin }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -34,6 +34,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requireAdmin?: boole
     return <Navigate to="/dashboard" replace />;
   }
 
+  if (forbidAdmin && user.role === 'ADMIN') {
+    return <Navigate to="/admin" replace />;
+  }
+
   return <>{children}</>;
 };
 
@@ -46,12 +50,12 @@ export const AppContent: React.FC = () => {
       <main className="main-content">
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+          <Route path="/login" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin' : '/dashboard'} replace /> : <LoginPage />} />
 
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute forbidAdmin>
                 <DashboardPage />
               </ProtectedRoute>
             }
@@ -60,7 +64,7 @@ export const AppContent: React.FC = () => {
           <Route
             path="/projects"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute forbidAdmin>
                 <ProjectsPage />
               </ProtectedRoute>
             }
@@ -78,7 +82,7 @@ export const AppContent: React.FC = () => {
           <Route
             path="/my-work"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute forbidAdmin>
                 <MyWorkPage />
               </ProtectedRoute>
             }
