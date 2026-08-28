@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { CheckSquare, Users, FileText, Code, Plus, ArrowLeft, Radio } from 'lucide-react';
+import { CheckSquare, Users, FileText, Code, Plus, ArrowLeft, Radio, Pencil } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { api } from '../services/api';
@@ -20,6 +20,17 @@ export const ProjectDetailPage: React.FC = () => {
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Edit Project Details Modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editTechStack, setEditTechStack] = useState('');
+  const [editStatus, setEditStatus] = useState('');
+  const [editGithubUrl, setEditGithubUrl] = useState('');
+  const [editDemoUrl, setEditDemoUrl] = useState('');
+  const [editTargetDate, setEditTargetDate] = useState('');
+  const [savingProject, setSavingProject] = useState(false);
 
   // Edit deliverable modal state
   const [editingDeliverable, setEditingDeliverable] = useState<ProjectDeliverable | null>(null);
@@ -169,7 +180,41 @@ export const ProjectDetailPage: React.FC = () => {
       setNewMemberId('');
       await loadProject();
     } catch (err: any) {
-      alert(err.message || 'Failed to add member.');
+      alert(err.message || 'Failed to add team member.');
+    }
+  };
+
+  const openEditModal = (p: Project) => {
+    setEditName(p.name || '');
+    setEditDescription(p.description || '');
+    setEditTechStack(p.techStack || '');
+    setEditStatus(p.status || 'IN_PROGRESS');
+    setEditGithubUrl(p.githubUrl || '');
+    setEditDemoUrl(p.demoUrl || '');
+    setEditTargetDate(p.targetDate ? p.targetDate.split('T')[0] : '');
+    setEditModalOpen(true);
+  };
+
+  const handleSaveProjectDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id) return;
+    setSavingProject(true);
+    try {
+      const res = await api.updateProject(id, {
+        name: editName,
+        description: editDescription,
+        techStack: editTechStack,
+        status: editStatus as any,
+        githubUrl: editGithubUrl || undefined,
+        demoUrl: editDemoUrl || undefined,
+        targetDate: editTargetDate || undefined,
+      });
+      setProject((prev) => (prev ? { ...prev, ...res.project } : prev));
+      setEditModalOpen(false);
+    } catch (err: any) {
+      alert(err.message || 'Failed to update project details.');
+    } finally {
+      setSavingProject(false);
     }
   };
 
@@ -228,6 +273,10 @@ export const ProjectDetailPage: React.FC = () => {
                 {project.name}
               </h1>
               <Badge status={project.status} />
+              <button className="btn btn-secondary btn-sm" style={{ marginLeft: '0.5rem' }} onClick={() => openEditModal(project)}>
+                <Pencil size={14} />
+                <span>Edit Details</span>
+              </button>
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', maxWidth: '720px' }}>
               {project.description || 'No project description provided.'}
@@ -552,6 +601,108 @@ export const ProjectDetailPage: React.FC = () => {
             </button>
             <button type="submit" className="btn btn-primary">
               Add Member
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Project Details Modal */}
+      <Modal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} title="Edit Project Details">
+        <form onSubmit={handleSaveProjectDetails}>
+          <div className="form-group">
+            <label htmlFor="editName">Project Name *</label>
+            <input
+              id="editName"
+              type="text"
+              className="input-field"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="editDescription">Description</label>
+            <textarea
+              id="editDescription"
+              className="input-field"
+              rows={3}
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="editTechStack">Tech Stack (Categorized)</label>
+            <textarea
+              id="editTechStack"
+              className="input-field"
+              rows={4}
+              placeholder="e.g.&#10;Frontend -> React.js, Vite, Tailwind CSS&#10;Backend -> Python, FastAPI&#10;AI / NLP -> Gemini API"
+              value={editTechStack}
+              onChange={(e) => setEditTechStack(e.target.value)}
+            />
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
+              💡 Tip: Format as <code>Category -&gt; Tech1, Tech2</code> (e.g. <code>Frontend -&gt; React, Vite</code>)
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-group">
+              <label htmlFor="editStatus">Project Status</label>
+              <select id="editStatus" className="input-field" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
+                <option value="PLANNING">PLANNING</option>
+                <option value="IN_PROGRESS">IN_PROGRESS</option>
+                <option value="COMPLETED">COMPLETED</option>
+                <option value="ON_HOLD">ON_HOLD</option>
+                <option value="ARCHIVED">ARCHIVED</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="editTargetDate">Target Completion Date</label>
+              <input
+                id="editTargetDate"
+                type="date"
+                className="input-field"
+                value={editTargetDate}
+                onChange={(e) => setEditTargetDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-group">
+              <label htmlFor="editGithubUrl">GitHub Repository URL</label>
+              <input
+                id="editGithubUrl"
+                type="url"
+                className="input-field"
+                placeholder="https://github.com/org/repo"
+                value={editGithubUrl}
+                onChange={(e) => setEditGithubUrl(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="editDemoUrl">Live Demo URL</label>
+              <input
+                id="editDemoUrl"
+                type="url"
+                className="input-field"
+                placeholder="https://demo.app.com"
+                value={editDemoUrl}
+                onChange={(e) => setEditDemoUrl(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setEditModalOpen(false)}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={savingProject}>
+              {savingProject ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>
