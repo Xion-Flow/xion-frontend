@@ -63,30 +63,30 @@ export function parseTechStack(rawTechStack?: string | null): ParsedTechStack {
       let category = parts[0].trim().replace(/^[-*•]\s*/, '');
       const techsStr = parts.slice(1).join(separator).trim();
 
-      if (category && techsStr) {
+      if (category) {
         // Clean out category label prefixes if present
         category = category.replace(/^tech\s*stack/i, '').trim() || category;
 
         // Split techs by comma, newline, or multiple spaces if no commas exist
         let techList: string[] = [];
-        if (techsStr.includes(',') || techsStr.includes(';')) {
-          techList = techsStr.split(/[,;]/).map((t) => t.trim());
-        } else {
-          // If space-separated, split smart (preserve Multi-word Techs like "Tailwind CSS")
-          techList = techsStr.split(/\s\s+|\n/).map((t) => t.trim());
-          if (techList.length <= 1) {
-            techList = [techsStr];
+        if (techsStr) {
+          if (techsStr.includes(',') || techsStr.includes(';')) {
+            techList = techsStr.split(/[,;]/).map((t) => t.trim());
+          } else {
+            // If space-separated, split smart (preserve Multi-word Techs like "Tailwind CSS")
+            techList = techsStr.split(/\s\s+|\n/).map((t) => t.trim());
+            if (techList.length <= 1) {
+              techList = [techsStr];
+            }
           }
+
+          techList = techList
+            .map((t) => t.replace(/^[-*•]\s*/, '').replace(/->|:/g, '').trim())
+            .filter((t) => Boolean(t) && t !== '->' && t !== ':');
         }
 
-        techList = techList
-          .map((t) => t.replace(/^[-*•]\s*/, '').replace(/->|:/g, '').trim())
-          .filter((t) => Boolean(t) && t !== '->' && t !== ':');
-
-        if (techList.length > 0) {
-          result[category] = techList;
-          hasCategoryFormat = true;
-        }
+        result[category] = techList;
+        hasCategoryFormat = true;
       }
     }
   }
@@ -111,7 +111,7 @@ export function parseTechStack(rawTechStack?: string | null): ParsedTechStack {
  */
 export function formatTechStackToString(stack: ParsedTechStack): string {
   return Object.entries(stack)
-    .filter(([_, techs]) => techs.length > 0)
-    .map(([category, techs]) => `${category} -> ${techs.join(', ')}`)
+    .filter(([category]) => Boolean(category && category.trim()))
+    .map(([category, techs]) => (techs && techs.length > 0 ? `${category} -> ${techs.join(', ')}` : `${category} ->`))
     .join('\n');
 }

@@ -21,17 +21,22 @@ export const VisualTechStackEditor: React.FC<VisualTechStackEditorProps> = ({ va
   const [customCategoryInput, setCustomCategoryInput] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
 
-  // Initialize categories from value string
+  // Initialize and sync categories from value string
   useEffect(() => {
-    const parsed = parseTechStack(value);
-    const items: CategoryItem[] = Object.entries(parsed).map(([name, techs], idx) => ({
-      id: `cat-${idx}-${Date.now()}`,
-      name,
-      techs,
-      newTechInput: '',
-    }));
-    setCategories(items);
-  }, []);
+    const currentSerialized = formatTechStackToString(
+      categories.reduce((acc, c) => (c.name.trim() ? { ...acc, [c.name.trim()]: c.techs } : acc), {})
+    );
+    if (value !== currentSerialized) {
+      const parsed = parseTechStack(value);
+      const items: CategoryItem[] = Object.entries(parsed).map(([name, techs], idx) => ({
+        id: `cat-${idx}-${Date.now()}`,
+        name,
+        techs,
+        newTechInput: '',
+      }));
+      setCategories(items);
+    }
+  }, [value]);
 
   // Synchronize back to string on any change
   const syncChanges = (updated: CategoryItem[]) => {
@@ -71,17 +76,30 @@ export const VisualTechStackEditor: React.FC<VisualTechStackEditorProps> = ({ va
   };
 
   const handleAddTech = (catId: string) => {
+    const target = categories.find((c) => c.id === catId);
+    if (!target || !target.newTechInput.trim()) return;
+
+    const rawInput = target.newTechInput.trim();
+    const newItems = rawInput
+      .split(/[,;\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (newItems.length === 0) return;
+
     const updated = categories.map((cat) => {
-      if (cat.id === catId && cat.newTechInput.trim()) {
-        const newTech = cat.newTechInput.trim();
-        if (!cat.techs.includes(newTech)) {
-          return {
-            ...cat,
-            techs: [...cat.techs, newTech],
-            newTechInput: '',
-          };
+      if (cat.id === catId) {
+        const mergedTechs = [...cat.techs];
+        for (const item of newItems) {
+          if (!mergedTechs.includes(item)) {
+            mergedTechs.push(item);
+          }
         }
-        return { ...cat, newTechInput: '' };
+        return {
+          ...cat,
+          techs: mergedTechs,
+          newTechInput: '',
+        };
       }
       return cat;
     });
