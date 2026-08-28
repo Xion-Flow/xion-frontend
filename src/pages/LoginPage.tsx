@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { api } from '../services/api';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
