@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { CheckSquare, Users, FileText, Code, Plus, ArrowLeft, Radio, Pencil, UserMinus } from 'lucide-react';
+import { CheckSquare, Users, FileText, Code, Plus, ArrowLeft, Radio, Pencil, UserMinus, Archive, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { api } from '../services/api';
@@ -46,6 +46,7 @@ export const ProjectDetailPage: React.FC = () => {
   const [newMemberId, setNewMemberId] = useState('');
 
   const canManageTeam = user?.role === 'ADMIN' || project?.createdById === user?.id || (project?.members?.some((m) => m.userId === user?.id) ?? false);
+  const isCreatorOrAdmin = user?.role === 'ADMIN' || project?.createdById === user?.id;
 
   const loadProject = async () => {
     if (!id) return;
@@ -194,6 +195,37 @@ export const ProjectDetailPage: React.FC = () => {
       await loadProject();
     } catch (err: any) {
       alert(err.message || 'Failed to remove team member.');
+    }
+  };
+
+  const handleArchiveProject = async () => {
+    if (!id || !project) return;
+    const isArchived = project.status === 'ARCHIVED';
+    const actionName = isArchived ? 'unarchive' : 'archive';
+    if (!window.confirm(`Are you sure you want to ${actionName} this project?`)) return;
+    try {
+      const res = await api.archiveProject(id, !isArchived);
+      setProject((prev) => (prev ? { ...prev, status: res.project.status } : prev));
+      setEditModalOpen(false);
+    } catch (err: any) {
+      alert(err.message || `Failed to ${actionName} project.`);
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!id || !project) return;
+    if (
+      !window.confirm(
+        `⚠️ DANGER: Are you sure you want to PERMANENTLY DELETE "${project.name}"?\n\nThis will remove all phases, deliverables, and activity history. This action CANNOT be undone!`
+      )
+    ) {
+      return;
+    }
+    try {
+      await api.deleteProject(id);
+      window.location.href = '/projects';
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete project.');
     }
   };
 
@@ -480,8 +512,15 @@ export const ProjectDetailPage: React.FC = () => {
       {activeTab === 'team' && (
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Project Team Members</h3>
-            {canManageTeam && (
+            <div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Project Team Members</h3>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                {project.type === 'PERSONAL'
+                  ? '👤 Personal Project — Member invitations are disabled for personal workspaces.'
+                  : 'Manage team collaborators and project assignments.'}
+              </p>
+            </div>
+            {project.type === 'TEAM' && canManageTeam && (
               <button className="btn btn-primary btn-sm" onClick={() => setAddMemberModalOpen(true)}>
                 <Plus size={16} />
                 <span>Add Team Member</span>
@@ -739,78 +778,110 @@ export const ProjectDetailPage: React.FC = () => {
               />
             </div>
           </div>
-          {/* Team Members Management inside Edit Modal */}
-          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
-            <label style={{ fontWeight: 700, fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block' }}>
-              Project Team Members ({project.members?.length || 0})
-            </label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
-              {project.members?.map((m) => (
-                <span
-                  key={m.id}
-                  style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    padding: '0.25rem 0.6rem',
-                    borderRadius: '16px',
-                    backgroundColor: 'var(--bg-surface-secondary)',
-                    border: '1px solid var(--border-color)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.375rem',
+          {/* Team Members Management inside Edit Modal (TEAM projects only) */}
+          {project.type === 'TEAM' && (
+            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+              <label style={{ fontWeight: 700, fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block' }}>
+                Project Team Members ({project.members?.length || 0})
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                {project.members?.map((m) => (
+                  <span
+                    key={m.id}
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      padding: '0.25rem 0.6rem',
+                      borderRadius: '16px',
+                      backgroundColor: 'var(--bg-surface-secondary)',
+                      border: '1px solid var(--border-color)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.375rem',
+                    }}
+                  >
+                    <span>{m.user.name}</span>
+                    {m.user.id !== project.createdById && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMember(m.user.id)}
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--status-blocked)', padding: 0, display: 'flex' }}
+                        title="Remove member"
+                      >
+                        <UserMinus size={12} />
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <select
+                  className="input-field"
+                  style={{ fontSize: '0.8125rem', padding: '0.375rem 0.625rem' }}
+                  value={newMemberId}
+                  onChange={(e) => setNewMemberId(e.target.value)}
+                >
+                  <option value="">-- Add New Member --</option>
+                  {allUsers
+                    .filter((u) => u.role !== 'ADMIN' && !project.members.some((m) => m.userId === u.id))
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.email})
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  disabled={!newMemberId}
+                  onClick={async () => {
+                    if (!id || !newMemberId) return;
+                    try {
+                      await api.addProjectMembers(id, [newMemberId]);
+                      setNewMemberId('');
+                      await loadProject();
+                    } catch (err: any) {
+                      alert(err.message || 'Failed to add member');
+                    }
                   }}
                 >
-                  <span>{m.user.name}</span>
-                  {m.user.id !== project.createdById && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMember(m.user.id)}
-                      style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--status-blocked)', padding: 0, display: 'flex' }}
-                      title="Remove member"
-                    >
-                      <UserMinus size={12} />
-                    </button>
-                  )}
-                </span>
-              ))}
+                  <Plus size={14} />
+                  <span>Add</span>
+                </button>
+              </div>
             </div>
+          )}
 
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <select
-                className="input-field"
-                style={{ fontSize: '0.8125rem', padding: '0.375rem 0.625rem' }}
-                value={newMemberId}
-                onChange={(e) => setNewMemberId(e.target.value)}
-              >
-                <option value="">-- Add New Member --</option>
-                {allUsers
-                  .filter((u) => u.role !== 'ADMIN' && !project.members.some((m) => m.userId === u.id))
-                  .map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.email})
-                    </option>
-                  ))}
-              </select>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                disabled={!newMemberId}
-                onClick={async () => {
-                  if (!id || !newMemberId) return;
-                  try {
-                    await api.addProjectMembers(id, [newMemberId]);
-                    setNewMemberId('');
-                    await loadProject();
-                  } catch (err: any) {
-                    alert(err.message || 'Failed to add member');
-                  }
-                }}
-              >
-                <Plus size={14} />
-                <span>Add</span>
-              </button>
+          {/* Project Creator & Admin Danger Zone (Archive & Delete) */}
+          {isCreatorOrAdmin && (
+            <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+              <label style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--status-blocked)', marginBottom: '0.5rem', display: 'block' }}>
+                Danger Zone (Project Owner Controls)
+              </label>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleArchiveProject}
+                  style={{ fontSize: '0.8125rem' }}
+                >
+                  <Archive size={14} />
+                  <span>{project.status === 'ARCHIVED' ? 'Unarchive Project' : 'Archive Project'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleDeleteProject}
+                  style={{ color: 'var(--status-blocked)', borderColor: 'var(--status-blocked)', fontSize: '0.8125rem' }}
+                >
+                  <Trash2 size={14} />
+                  <span>Delete Project</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
             <button type="button" className="btn btn-secondary" onClick={() => setEditModalOpen(false)}>
