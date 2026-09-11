@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { CheckSquare, Users, FileText, Code, Plus, ArrowLeft, Radio, Pencil, UserMinus, Archive, Trash2, Settings } from 'lucide-react';
+import { CheckSquare, Users, FileText, Code, Plus, ArrowLeft, Radio, Pencil, UserMinus, Archive, Trash2, Settings, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { api } from '../services/api';
@@ -251,8 +251,6 @@ export const ProjectDetailPage: React.FC = () => {
     }
   };
 
-
-
   const handleSaveProjectDetails = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
@@ -355,6 +353,42 @@ export const ProjectDetailPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Archived Project Banner Notice */}
+      {project.status === 'ARCHIVED' && (
+        <div
+          className="card"
+          style={{
+            backgroundColor: 'rgba(239, 68, 68, 0.05)',
+            border: '1.5px solid var(--status-blocked)',
+            marginBottom: '1.5rem',
+            padding: '1rem 1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <AlertTriangle size={22} style={{ color: 'var(--status-blocked)' }} />
+            <div>
+              <p style={{ fontWeight: 800, fontSize: '0.9375rem', color: 'var(--text-primary)' }}>
+                This Project is Archived
+              </p>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                Tasks and deliverables for archived projects are hidden from active personal work queues and dashboard metrics.
+              </p>
+            </div>
+          </div>
+
+          {isCreatorOrAdmin && (
+            <button className="btn btn-secondary btn-sm" onClick={handleArchiveProject}>
+              <Archive size={14} />
+              <span>Unarchive Project</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Tab Navigation */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
         <button
@@ -406,7 +440,7 @@ export const ProjectDetailPage: React.FC = () => {
       {/* TAB 1: ROADMAP & DELIVERABLES */}
       {activeTab === 'roadmap' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) 1fr', gap: '1.5rem' }}>
-          {/* Left Column: Interactive 10-Phase Step Visualizer */}
+          {/* Left Column: Interactive Step Visualizer */}
           <div className="card" style={{ padding: '1rem' }}>
             <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>
               Development Phases

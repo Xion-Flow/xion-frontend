@@ -117,14 +117,30 @@ export const api = {
   },
 
   // Projects
-  async getProjects() {
-    const res = await fetch(`${API_BASE}/projects`, {
+  async getProjects(status?: string, excludeArchived?: boolean) {
+    let url = `${API_BASE}/projects`;
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (excludeArchived) params.append('excludeArchived', 'true');
+    if (params.toString()) url += `?${params.toString()}`;
+
+    const res = await fetch(url, {
       headers: getAuthHeader(),
     });
     return handleResponse<{ projects: Project[] }>(res);
   },
 
-  async createProject(data: { name: string; description?: string; techStack?: string; githubUrl?: string; demoUrl?: string; targetDate?: string; type?: ProjectType; memberIds?: string[] }) {
+  async createProject(data: {
+    name: string;
+    description?: string;
+    techStack?: string;
+    githubUrl?: string;
+    demoUrl?: string;
+    targetDate?: string;
+    type?: ProjectType;
+    memberIds?: string[];
+    customPhases?: any[];
+  }) {
     const res = await fetch(`${API_BASE}/projects`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },

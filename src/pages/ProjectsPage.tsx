@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { Plus, FolderKanban, Users, Code, ArrowRight, X, Github, ExternalLink } from 'lucide-react';
+import { Plus, FolderKanban, Users, Code, ArrowRight, X, Github, ExternalLink, Download, FileJson, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { Project, ProjectType, User } from '../types';
 import { ProgressBar } from '../components/ProgressBar';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
-import { TechStackBadges } from '../components/TechStackBadges';
-import { VisualTechStackEditor } from '../components/VisualTechStackEditor';
 import { UserSearchSelect } from '../components/UserSearchSelect';
 
 export const ProjectsPage = () => {
@@ -31,10 +29,15 @@ export const ProjectsPage = () => {
   const [demoUrl, setDemoUrl] = useState('');
   const [targetDate, setTargetDate] = useState('');
   const [projectType, setProjectType] = useState<ProjectType>('PERSONAL');
+  const [workflowMode, setWorkflowMode] = useState<'STANDARD' | 'CUSTOM_JSON'>('STANDARD');
+  const [customJsonInput, setCustomJsonInput] = useState('');
+  const [jsonValidationError, setJsonValidationError] = useState('');
+  const [parsedCustomPhases, setParsedCustomPhases] = useState<any[] | null>(null);
+
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
 
-  // Live member search state for Create Project modal
+  // Live member search state
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<User[]>([]);
   const [memberSearchResults, setMemberSearchResults] = useState<User[]>([]);
@@ -83,6 +86,105 @@ export const ProjectsPage = () => {
     return () => clearTimeout(timer);
   }, [memberSearchQuery, selectedMembers, user?.id]);
 
+  // Live JSON Schema validation
+  useEffect(() => {
+    if (workflowMode !== 'CUSTOM_JSON' || !customJsonInput.trim()) {
+      setJsonValidationError('');
+      setParsedCustomPhases(null);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(customJsonInput);
+      let phasesArray: any[] = [];
+
+      if (Array.isArray(parsed)) {
+        phasesArray = parsed;
+      } else if (parsed && Array.isArray(parsed.phases)) {
+        phasesArray = parsed.phases;
+      } else {
+        throw new Error('JSON root must be an array of phases or an object with a "phases" array.');
+      }
+
+      if (phasesArray.length === 0) {
+        throw new Error('JSON must contain at least one phase definition.');
+      }
+
+      for (let i = 0; i < phasesArray.length; i++) {
+        const p = phasesArray[i];
+        if (!p.name || typeof p.name !== 'string') {
+          throw new Error(`Phase ${i + 1} is missing a valid "name" string property.`);
+        }
+      }
+
+      setJsonValidationError('');
+      setParsedCustomPhases(phasesArray);
+    } catch (err: any) {
+      setJsonValidationError(err.message || 'Invalid JSON formatting.');
+      setParsedCustomPhases(null);
+    }
+  }, [customJsonInput, workflowMode]);
+
+  const handleDownloadSampleJson = () => {
+    const sample = [
+      {
+        name: "Phase 1: Discovery & Concept",
+        description: "Define product scope, target users, and key features.",
+        objective: "Establish product vision and technical feasibility.",
+        order: 1,
+        deliverables: [
+          { name: "Product Requirement Spec", description: "Document feature requirements", isRequired: true, order: 1 },
+          { name: "Technical Feasibility Assessment", description: "Evaluate tech stack and risks", isRequired: true, order: 2 }
+        ]
+      },
+      {
+        name: "Phase 2: MVP Build",
+        description: "Core features implementation and API integrations.",
+        objective: "Deliver working software prototype for user testing.",
+        order: 2,
+        deliverables: [
+          { name: "Database Schema & Models", description: "Design database tables", isRequired: true, order: 1 },
+          { name: "Core API Endpoints", description: "Build REST / GraphQL APIs", isRequired: true, order: 2 },
+          { name: "Frontend Component Suite", description: "Build UI views and forms", isRequired: true, order: 3 }
+        ]
+      },
+      {
+        name: "Phase 3: Production Rollout",
+        description: "QA testing, deployment, and monitoring.",
+        objective: "Deploy stable production release.",
+        order: 3,
+        deliverables: [
+          { name: "E2E Integration Test Suite", description: "Run automated tests", isRequired: true, order: 1 },
+          { name: "Production Deployment", description: "Deploy to server / cloud", isRequired: true, order: 2 }
+        ]
+      }
+    ];
+
+    const blob = new Blob([JSON.stringify(sample, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'xion-sample-workflow-template.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (content) {
+        setCustomJsonInput(content);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const filteredProjects = projects.filter((p) => {
     if (statusFilter === 'ACTIVE') return p.status !== 'ARCHIVED' && p.status !== 'COMPLETED';
     if (statusFilter === 'COMPLETED') return p.status === 'COMPLETED';
@@ -93,6 +195,18 @@ export const ProjectsPage = () => {
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (workflowMode === 'CUSTOM_JSON') {
+      if (jsonValidationError) {
+        setError(`Cannot submit: ${jsonValidationError}`);
+        return;
+      }
+      if (!parsedCustomPhases || parsedCustomPhases.length === 0) {
+        setError('Please upload or paste a valid custom workflow JSON template.');
+        return;
+      }
+    }
+
     setCreating(true);
 
     try {
@@ -105,6 +219,7 @@ export const ProjectsPage = () => {
         targetDate,
         type: projectType,
         memberIds: projectType === 'TEAM' ? selectedMembers.map((m) => m.id) : [],
+        customPhases: workflowMode === 'CUSTOM_JSON' ? parsedCustomPhases! : undefined,
       });
 
       setModalOpen(false);
@@ -115,6 +230,9 @@ export const ProjectsPage = () => {
       setDemoUrl('');
       setTargetDate('');
       setProjectType('PERSONAL');
+      setWorkflowMode('STANDARD');
+      setCustomJsonInput('');
+      setParsedCustomPhases(null);
       setSelectedMembers([]);
       setMemberSearchQuery('');
       await loadData();
@@ -132,6 +250,11 @@ export const ProjectsPage = () => {
       </div>
     );
   }
+
+  const customTotalDeliverables = parsedCustomPhases?.reduce(
+    (acc: number, p: any) => acc + (Array.isArray(p.deliverables) ? p.deliverables.length : 0),
+    0
+  );
 
   return (
     <div>
@@ -195,7 +318,7 @@ export const ProjectsPage = () => {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}>
           {filteredProjects.map((p) => (
-            <div key={p.id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div key={p.id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', opacity: p.status === 'ARCHIVED' ? 0.85 : 1 }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -283,7 +406,7 @@ export const ProjectsPage = () => {
         </div>
       )}
 
-      {/* Create Project Modal */}
+      {/* Create Project Modal with Custom JSON Import Workflow */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Create New Engineering Project">
         {error && (
           <div style={{ backgroundColor: 'var(--status-blocked-bg)', color: 'var(--status-blocked)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', fontSize: '0.875rem', fontWeight: 600 }}>
@@ -339,14 +462,90 @@ export const ProjectsPage = () => {
             <textarea
               id="description"
               className="input-field"
-              rows={3}
+              rows={2}
               placeholder="Brief description of the product objective..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
+          {/* Workflow Template Selection */}
+          <div className="form-group" style={{ backgroundColor: 'var(--bg-surface-secondary)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+            <label style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Sparkles size={16} style={{ color: 'var(--accent-primary)' }} />
+              <span>Project Workflow Architecture *</span>
+            </label>
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+              <button
+                type="button"
+                className={`btn ${workflowMode === 'STANDARD' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setWorkflowMode('STANDARD')}
+                style={{ padding: '0.625rem 0.75rem', fontSize: '0.8125rem' }}
+              >
+                <span>⚡ Standard 10-Phase Lifecycle</span>
+              </button>
+
+              <button
+                type="button"
+                className={`btn ${workflowMode === 'CUSTOM_JSON' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setWorkflowMode('CUSTOM_JSON')}
+                style={{ padding: '0.625rem 0.75rem', fontSize: '0.8125rem' }}
+              >
+                <FileJson size={16} />
+                <span>Import Custom JSON</span>
+              </button>
+            </div>
+
+            {workflowMode === 'CUSTOM_JSON' && (
+              <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    Upload `.json` file or paste template schema
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleDownloadSampleJson}
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                  >
+                    <Download size={12} />
+                    <span>Sample JSON Template</span>
+                  </button>
+                </div>
+
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleFileUpload}
+                  style={{ fontSize: '0.8125rem', marginBottom: '0.75rem', width: '100%' }}
+                />
+
+                <textarea
+                  className="input-field"
+                  rows={5}
+                  style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
+                  placeholder='[\n  {\n    "name": "Phase 1: Custom Phase",\n    "description": "Description...",\n    "deliverables": [\n      { "name": "Task 1", "isRequired": true }\n    ]\n  }\n]'
+                  value={customJsonInput}
+                  onChange={(e) => setCustomJsonInput(e.target.value)}
+                />
+
+                {jsonValidationError && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: 'var(--status-blocked)', fontSize: '0.75rem', marginTop: '0.5rem', fontWeight: 600 }}>
+                    <AlertCircle size={14} />
+                    <span>{jsonValidationError}</span>
+                  </div>
+                )}
+
+                {parsedCustomPhases && !jsonValidationError && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: 'var(--status-completed)', fontSize: '0.75rem', marginTop: '0.5rem', fontWeight: 700 }}>
+                    <CheckCircle2 size={14} />
+                    <span>Valid Workflow: {parsedCustomPhases.length} Custom Phases ({customTotalDeliverables} Tasks)</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div className="form-group">

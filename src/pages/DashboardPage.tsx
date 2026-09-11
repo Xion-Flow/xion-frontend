@@ -6,7 +6,6 @@ import { api } from '../services/api';
 import { Project, ProjectDeliverable, ProjectInvite } from '../types';
 import { ProgressBar } from '../components/ProgressBar';
 import { Badge } from '../components/Badge';
-import { TechStackBadges } from '../components/TechStackBadges';
 import { UserPlus, Check, X } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
@@ -23,7 +22,7 @@ export const DashboardPage: React.FC = () => {
   const loadData = async () => {
     try {
       const [projRes, workRes, notifRes] = await Promise.all([
-        api.getProjects(),
+        api.getProjects(undefined, true), // exclude archived projects from dashboard
         api.getMyWork('PENDING'),
         api.getNotifications(),
       ]);
@@ -56,7 +55,10 @@ export const DashboardPage: React.FC = () => {
       await api.updateDeliverable(deliverableId, { status: newStatus as any });
 
       // Refresh list
-      const [projRes, workRes] = await Promise.all([api.getProjects(), api.getMyWork('PENDING')]);
+      const [projRes, workRes] = await Promise.all([
+        api.getProjects(undefined, true),
+        api.getMyWork('PENDING'),
+      ]);
       setProjects(projRes.projects);
       setMyWork(workRes.deliverables);
     } catch (err: any) {
@@ -72,8 +74,9 @@ export const DashboardPage: React.FC = () => {
     );
   }
 
-  const completedWorkCount = projects.reduce((acc, p) => acc + (p.completedDeliverablesCount || 0), 0);
-  const totalWorkCount = projects.reduce((acc, p) => acc + (p.deliverablesCount || 0), 0);
+  const activeProjects = projects.filter((p) => p.status !== 'ARCHIVED');
+  const completedWorkCount = activeProjects.reduce((acc, p) => acc + (p.completedDeliverablesCount || 0), 0);
+  const totalWorkCount = activeProjects.reduce((acc, p) => acc + (p.deliverablesCount || 0), 0);
 
   return (
     <div>
@@ -83,7 +86,7 @@ export const DashboardPage: React.FC = () => {
           Welcome back, {user?.name}
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9375rem', marginTop: '0.25rem' }}>
-          Here is your development roadmap overview and immediate task queue.
+          Here is your active development roadmap overview and immediate task queue.
         </p>
       </div>
 
@@ -173,7 +176,7 @@ export const DashboardPage: React.FC = () => {
           </div>
           <div>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Active Projects</p>
-            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>{projects.length}</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>{activeProjects.length}</p>
           </div>
         </div>
 
@@ -192,7 +195,7 @@ export const DashboardPage: React.FC = () => {
             <CheckCircle2 size={24} />
           </div>
           <div>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total Deliverables Done</p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontWeight: 600 }}>Active Deliverables Done</p>
             <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>{completedWorkCount} / {totalWorkCount}</p>
           </div>
         </div>
@@ -203,20 +206,20 @@ export const DashboardPage: React.FC = () => {
         {/* Projects Section */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Project Roadmap Status</h2>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Active Project Roadmaps</h2>
             <Link to="/projects" className="btn btn-secondary btn-sm">
               <span>View All</span>
               <ArrowRight size={14} />
             </Link>
           </div>
 
-          {projects.length === 0 ? (
+          {activeProjects.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
-              <p style={{ color: 'var(--text-muted)' }}>No projects found. Create or join a project to see your workflow roadmap.</p>
+              <p style={{ color: 'var(--text-muted)' }}>No active projects found. Create or join a project to see your workflow roadmap.</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {projects.map((p) => (
+              {activeProjects.map((p) => (
                 <div key={p.id} className="card">
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                     <Link to={`/projects/${p.id}`} style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -279,7 +282,7 @@ export const DashboardPage: React.FC = () => {
               <CheckCircle2 size={36} style={{ color: 'var(--status-completed)', margin: '0 auto 0.75rem' }} />
               <p style={{ fontWeight: 700, fontSize: '1rem' }}>All Caught Up!</p>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.84375rem', marginTop: '0.25rem' }}>
-                You have no pending deliverables assigned to you.
+                You have no active pending deliverables assigned to you.
               </p>
             </div>
           ) : (
